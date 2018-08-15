@@ -1,0 +1,1 @@
+curl -X PUT http://127.0.0.1:5984/$1/$2 -d ' { "Name" : "Raju", "age" : 23, "Designation" : "Designer" } '
