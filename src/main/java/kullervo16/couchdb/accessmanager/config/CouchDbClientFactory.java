@@ -35,7 +35,7 @@ public class CouchDbClientFactory {
                     .setMaxConnections(100)
                     .setConnectionTimeout(0);
 
-            CouchDbClient dbClient3 = new CouchDbClient(properties);
+            this.clientMap.put(dbName,new CouchDbClient(properties));
         }
         return this.clientMap.get(dbName);
     }
