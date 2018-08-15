@@ -1,9 +1,10 @@
-package kullervo16.couchdb.accessmanager;
+package kullervo16.couchdb.accessmanager.utils;
 
 import org.keycloak.KeycloakPrincipal;
 
 import java.security.Principal;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,5 +35,24 @@ public class AccessHelper {
     public static String getUserId(Principal user) {
         KeycloakPrincipal principal = (KeycloakPrincipal) user;
         return principal.getKeycloakSecurityContext().getToken().getPreferredUsername().replace("@","_");
+    }
+
+    public static boolean hasAdminAccess(Principal user, Map security) {
+        if(security.containsKey("admins")) {
+            Map admins = (Map) security.get("admins");
+            if(admins.containsKey("names")) {
+                List<String> adminNames = (List<String>) admins.get("names");
+                return adminNames.contains(getUserId(user));
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasWriteAccess(Principal user, Map security) {
+        return false;
+    }
+
+    public static boolean hasReadAccess(Principal user, Map security) {
+        return false;
     }
 }

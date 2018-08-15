@@ -4,7 +4,6 @@ import lombok.Data;
 
 @Data
 public class DatabaseAccess {
-    private String dbName;
     private boolean readAccess;
     private boolean writeAccess;
     private boolean adminAccess;
