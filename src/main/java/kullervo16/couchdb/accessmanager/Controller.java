@@ -64,7 +64,7 @@ public class Controller {
                 System.out.println(dbName);
                 CouchDbClient dbClient = couchDbClientFactory.getClient(dbName);
                 DatabaseAccess dbAccess = new DatabaseAccess();
-                Map security = getSecurityDoc(dbClient);
+                Map security = getSecurityDoc(dbClient, dbName);
 
                 dbAccess.setAdminAccess(AccessHelper.hasAdminAccess(user, security));
                 dbAccess.setReadAccess(AccessHelper.hasReadAccess(user, security));
@@ -75,11 +75,13 @@ public class Controller {
         return userData;
     }
 
-    private Map getSecurityDoc(CouchDbClient dbClient) {
+    private Map getSecurityDoc(CouchDbClient dbClient, String dbName) {
         Map security;
         try {
             security = dbClient.find(Map.class, "_security");
-            System.out.println(security);
+            if(security.isEmpty()) {
+                throw new NoDocumentException("trigger security creation");
+            }
         }catch(NoDocumentException nde) {
             // no security setting yet, create a default one
             Map newSecurity = new HashMap();
@@ -94,7 +96,11 @@ public class Controller {
 
     private Map getEmptySecurityMap() {
         Map empty = new HashMap();
-        empty.put("names",new ArrayList<String>());
+        List<String> nameList = new ArrayList<>();
+
+        nameList.add("non-existing-user-to-prevent-access");
+
+        empty.put("names",nameList);
         empty.put("roles", new ArrayList<String>());
         return empty;
     }
@@ -104,19 +110,36 @@ public class Controller {
                                 @PathVariable(value = "type") String type,
                                 Principal user) throws IOException {
         CouchDbClient dbClient = this.couchDbClientFactory.getClient(db);
-        Map security = getSecurityDoc(dbClient);
-        if(type.equals("admin")) {
-            // first check whether the user has the proper role
-            if(!AccessHelper.getRoles(user).contains("couch_admin")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-            if(!security.containsKey("admins")) {
-                security.put("admins", getEmptySecurityMap());
-            }
-            ((List<String>)((Map)security.get("admins")).get("names")).add(AccessHelper.getUserId(user));
-            security.put("_id", "_security");
-            dbClient.save(security);
+        Map security = getSecurityDoc(dbClient, db);
+        switch(type) {
+            case "admin":
+                // first check whether the user has the proper role
+                if(!AccessHelper.getRoles(user).contains("couch_admin")) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+                if(!security.containsKey("admins")) {
+                    security.put("admins", getEmptySecurityMap());
+                }
+                ((List<String>)((Map)security.get("admins")).get("names")).add(AccessHelper.getUserId(user));
+                break;
+            case "reader":
+            case "writer":
+                // first check whether the user has the proper role
+                if(!AccessHelper.getRoles(user).contains("couch_"+type)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+                if(!security.containsKey("members")) {
+                    security.put("members", getEmptySecurityMap());
+                }
+                ((List<String>)((Map)security.get("members")).get("names")).add(AccessHelper.getUserId(user));
+                break;
         }
+
+
+
+
+        security.put("_id", "_security");
+        dbClient.save(security);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

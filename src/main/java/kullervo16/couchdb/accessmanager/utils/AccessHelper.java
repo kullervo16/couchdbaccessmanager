@@ -49,10 +49,24 @@ public class AccessHelper {
     }
 
     public static boolean hasWriteAccess(Principal user, Map security) {
+        if(security.containsKey("members")) {
+            Map members = (Map) security.get("members");
+            if(members.containsKey("names")) {
+                List<String> adminNames = (List<String>) members.get("names");
+                return adminNames.contains(getUserId(user));
+            }
+        }
         return false;
     }
 
     public static boolean hasReadAccess(Principal user, Map security) {
+        if(security.containsKey("members")) {
+            Map members = (Map) security.get("members");
+            if(members.containsKey("names")) {
+                List<String> adminNames = (List<String>) members.get("names");
+                return adminNames.contains(getUserId(user));
+            }
+        }
         return false;
     }
 }
