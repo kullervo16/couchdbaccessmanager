@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Controller {
 
     private static final String template = "Hello, %s %s %s!";
+    public static final String ACCESS_MANAGER = "access_manager";
     private final AtomicLong counter = new AtomicLong();
 
     @Autowired
@@ -57,6 +59,14 @@ public class Controller {
             newUser.put("_id","org.couchdb.user:" + userData.getUserId());
             System.out.println(newUser);
             client.save(newUser);
+
+            CouchDbClient accessManagerClient = this.couchDbClientFactory.getClient(ACCESS_MANAGER);
+            Map creationEvent = new HashMap();
+            creationEvent.put("user", AccessHelper.getUserId(user));
+            creationEvent.put("type", "userCreated");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            creationEvent.put("timeStamp", sdf.format(new Date()));
+            accessManagerClient.save(creationEvent);
         }
         // now list all databases and check whether the user has access or not
         for(String dbName : this.dbLister.getDbNames()) {
@@ -110,6 +120,7 @@ public class Controller {
                                 @PathVariable(value = "type") String type,
                                 Principal user) throws IOException {
         CouchDbClient dbClient = this.couchDbClientFactory.getClient(db);
+        CouchDbClient accessManagerClient = this.couchDbClientFactory.getClient(ACCESS_MANAGER);
         Map security = getSecurityDoc(dbClient, db);
         switch(type) {
             case "admin":
@@ -136,10 +147,18 @@ public class Controller {
         }
 
 
-
-
         security.put("_id", "_security");
         dbClient.save(security);
+
+        Map creationEvent = new HashMap();
+        creationEvent.put("user", AccessHelper.getUserId(user));
+        creationEvent.put("type", "accessChanged");
+        creationEvent.put("database", db);
+        creationEvent.put("accessType", type);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        creationEvent.put("timeStamp", sdf.format(new Date()));
+        accessManagerClient.save(creationEvent);
+
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
