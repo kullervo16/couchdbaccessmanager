@@ -4,7 +4,8 @@ import kullervo16.couchdb.accessmanager.config.CouchDbClientFactory;
 import kullervo16.couchdb.accessmanager.model.DatabaseAccess;
 import kullervo16.couchdb.accessmanager.model.UserData;
 import kullervo16.couchdb.accessmanager.utils.AccessHelper;
-import kullervo16.couchdb.accessmanager.utils.DbLister;
+import kullervo16.couchdb.accessmanager.utils.PlainRestClient;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.lightcouch.CouchDbClient;
 import org.lightcouch.NoDocumentException;
@@ -33,7 +34,7 @@ public class Controller {
     private CouchDbClientFactory couchDbClientFactory;
 
     @Autowired
-    private DbLister dbLister;
+    private PlainRestClient plainRestClient;
 
     @RequestMapping("/userData")
     public UserData getUserData(Principal user) throws IOException {
@@ -54,7 +55,7 @@ public class Controller {
             Map newUser = new HashMap<>();
             newUser.put("name", userData.getUserId());
             newUser.put("password", userData.getPassword());
-            newUser.put("roles", new ArrayList<>()); // TODO : set based on attributes
+            newUser.put("roles", new ArrayList<>());
             newUser.put("type", "user");
             newUser.put("_id","org.couchdb.user:" + userData.getUserId());
             System.out.println(newUser);
@@ -69,16 +70,22 @@ public class Controller {
             accessManagerClient.save(creationEvent);
         }
         // now list all databases and check whether the user has access or not
-        for(String dbName : this.dbLister.getDbNames()) {
+        for(String dbName : this.plainRestClient.getDbNames()) {
             if(!"_users".equals(dbName)) {
                 System.out.println(dbName);
                 CouchDbClient dbClient = couchDbClientFactory.getClient(dbName);
+
                 DatabaseAccess dbAccess = new DatabaseAccess();
                 Map security = getSecurityDoc(dbClient, dbName);
+                JSONObject couchUserData = this.plainRestClient.getUserDoc(AccessHelper.getUserId(user));
 
                 dbAccess.setAdminAccess(AccessHelper.hasAdminAccess(user, security));
                 dbAccess.setReadAccess(AccessHelper.hasReadAccess(user, security));
-                dbAccess.setWriteAccess(AccessHelper.hasWriteAccess(user, security));
+                if(couchUserData.has("roles")) {
+                    dbAccess.setWriteAccess(AccessHelper.hasWriteAccess(dbName, user, security, couchUserData.getJSONArray("roles").toList()));
+                } else {
+                    dbAccess.setWriteAccess(false); // no roles for this user (yet), so defintely not a writer role for this database
+                }
                 userData.getAccessMap().put(dbName, dbAccess);
             }
         }
@@ -100,6 +107,12 @@ public class Controller {
             newSecurity.put("_id","_security");
             dbClient.save(newSecurity);
             security = dbClient.find(Map.class, "_security");
+
+            // also set the write protection view
+            Map writeProtection = new HashMap();
+            writeProtection.put("_id","_design/accessMgr");
+            writeProtection.put("validate_doc_update", "function(newDoc, oldDoc, userCtx) { if (userCtx.roles.indexOf(userCtx.db + '_writer') < 0) throw({forbidden: 'you are not allowed to write documents in this database '+userCtx.db+'/'+userCtx.roles+'/'+userCtx.roles.indexOf(userCtx.db + '_writer')});}");
+            dbClient.save(writeProtection);
         }
         return security;
     }
@@ -120,6 +133,7 @@ public class Controller {
                                 @PathVariable(value = "type") String type,
                                 Principal user) throws IOException {
         CouchDbClient dbClient = this.couchDbClientFactory.getClient(db);
+        CouchDbClient usersClient = this.couchDbClientFactory.getClient("_users");
         CouchDbClient accessManagerClient = this.couchDbClientFactory.getClient(ACCESS_MANAGER);
         Map security = getSecurityDoc(dbClient, db);
         switch(type) {
@@ -143,6 +157,17 @@ public class Controller {
                     security.put("members", getEmptySecurityMap());
                 }
                 ((List<String>)((Map)security.get("members")).get("names")).add(AccessHelper.getUserId(user));
+                if(type.equals("writer")) {
+                    // add the role to the list of roles
+                    JSONObject couchUserData = this.plainRestClient.getUserDoc(AccessHelper.getUserId(user));
+                    if(!couchUserData.has("roles")) {
+                        couchUserData.put("roles", new JSONArray());
+                    }
+                    if(!couchUserData.getJSONArray("roles").toList().contains(db+"_writer")) {
+                        couchUserData.getJSONArray("roles").put(db + "_writer");
+                        usersClient.update(couchUserData.toMap());
+                    }
+                }
                 break;
         }
 

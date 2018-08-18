@@ -3,10 +3,7 @@ package kullervo16.couchdb.accessmanager.utils;
 import org.keycloak.KeycloakPrincipal;
 
 import java.security.Principal;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class AccessHelper {
 
@@ -48,12 +45,15 @@ public class AccessHelper {
         return false;
     }
 
-    public static boolean hasWriteAccess(Principal user, Map security) {
+    public static boolean hasWriteAccess(String dbName, Principal user, Map security, List<Object> couchUserRoles) {
         if(security.containsKey("members")) {
             Map members = (Map) security.get("members");
             if(members.containsKey("names")) {
                 List<String> adminNames = (List<String>) members.get("names");
-                return adminNames.contains(getUserId(user));
+                if(adminNames.contains(getUserId(user)) && couchUserRoles != null) {
+                    return couchUserRoles.contains(dbName+"_writer");
+                }
+                return false;
             }
         }
         return false;
