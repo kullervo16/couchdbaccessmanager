@@ -26,10 +26,11 @@ At the moment, 3 roles are defined :
 * couch_reader : allows a user to request read access to a database
 * couch_writer : allows a user to request write access to a database
 
-In combination with some attributes, you can restrict it
-
-* couch_[admin/reader/writer]_dbs : a comma separated list of databases you will allow the access to. If not present, the
+In combination with the ```couch_[admin/reader/writer]_dbs``` attribute, you can restrict on which databases a user can request access.
+It is a comma separated list of databases you will allow this kind of access to. If not present, the
 user can request access to all databases
+
+**Make sure to create a proper role mapping for the client so that this attribute is present in your access token!**
 
 
 ### Temporary access
@@ -38,6 +39,8 @@ access it grants, and revokes it when the duration expires.
 
 The governing attribute is ```couch_[admin/reader/writer]_duration```. This is the number of hours the access will remain active. If
 not present, it defaults to 24 hours.
+
+**Make sure to create a proper role mapping for the client so that this attribute is present in your access token!**
 
 ### Read-only access
 The access manager is capable of installing a validation document to effectively create a read-only access.

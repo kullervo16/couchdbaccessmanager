@@ -10,12 +10,9 @@ import org.json.JSONObject;
 import org.lightcouch.CouchDbClient;
 import org.lightcouch.NoDocumentException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -100,19 +97,27 @@ public class AccessService {
      * @param type
      * @param dbName
      * @param userroles
+     * @param attributes
      * @throws NoAccessException
      */
-    public void addAccess(String userId, String type, String dbName, Set<String> userroles) throws NoAccessException {
+    public void addAccess(String userId, String type, String dbName, Set<String> userroles, Map<String, Object> attributes) throws NoAccessException {
         CouchDbClient dbClient = this.couchDbClientFactory.getClient(dbName);
         CouchDbClient usersClient = this.couchDbClientFactory.getClient("_users");
         CouchDbClient accessManagerClient = this.couchDbClientFactory.getClient(ACCESS_MANAGER);
         Map security = getSecurityDoc(dbClient, dbName);
+
+        // first check whether the user has the proper role
+        if(!userroles.contains("couch_"+type)) {
+            throw new NoAccessException("Missing role: couch_"+type);
+        }
+
+        // then check whether there is a db restriction for this user
+        List<String> dbRestrictions = this.getDbRestriction(userId, type, attributes);
+        if(!dbRestrictions.isEmpty() && !dbRestrictions.contains(dbName)) {
+            throw new NoAccessException(dbName+" is not in the allowed databases for type "+type);
+        }
         switch(type) {
             case "admin":
-                // first check whether the user has the proper role
-                if(!userroles.contains("couch_admin")) {
-                    throw new NoAccessException("Missing role");
-                }
                 if(!security.containsKey("admins")) {
                     security.put("admins", getEmptySecurityMap());
                 }
@@ -120,10 +125,6 @@ public class AccessService {
                 break;
             case "reader":
             case "writer":
-                // first check whether the user has the proper role
-                if(!userroles.contains("couch_"+type)) {
-                    throw new NoAccessException("Missing role");
-                }
                 if(!security.containsKey("members")) {
                     security.put("members", getEmptySecurityMap());
                 }
