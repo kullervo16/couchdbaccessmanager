@@ -37,7 +37,7 @@ public class Controller {
 
 
     @RequestMapping("/requestAccess/{db}/{type}")
-    public ResponseEntity getUserData(@PathVariable(value = "db") String db,
+    public ResponseEntity addAcces(@PathVariable(value = "db") String db,
                                 @PathVariable(value = "type") String type,
                                 Principal user) throws IOException {
 
@@ -53,6 +53,20 @@ public class Controller {
             log.warn("No access for "+accessHelper.getUserId(user)+": "+nae.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+    }
+
+    @RequestMapping("/removeAccess/{db}/{type}")
+    public ResponseEntity removeAccess(@PathVariable(value = "db") String db,
+                                      @PathVariable(value = "type") String type,
+                                      Principal user) throws IOException {
+
+            this.accessService.removeAccess(
+                    accessHelper.getUserId(user),
+                    type,
+                    db);
+            return ResponseEntity.status(HttpStatus.ACCEPTED).build();
+
 
     }
 

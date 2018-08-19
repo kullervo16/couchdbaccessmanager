@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -116,12 +117,18 @@ public class AccessService {
         if(!dbRestrictions.isEmpty() && !dbRestrictions.contains(dbName)) {
             throw new NoAccessException(dbName+" is not in the allowed databases for type "+type);
         }
+        int duration = 1440;
+        if(attributes.containsKey("couch_"+type+"_duration")) {
+            duration = (Integer)attributes.get("couch_"+type+"_duration");
+        }
+
         switch(type) {
             case "admin":
                 if(!security.containsKey("admins")) {
                     security.put("admins", getEmptySecurityMap());
                 }
                 ((List<String>)((Map)security.get("admins")).get("names")).add(userId);
+
                 break;
             case "reader":
             case "writer":
@@ -142,6 +149,22 @@ public class AccessService {
                 }
                 break;
         }
+        if(duration > 0) {
+            JSONObject couchUserData = this.plainRestClient.getUserDoc(userId);
+            if (!couchUserData.has("expiration")) {
+                couchUserData.put("expiration", new JSONArray());
+            }
+            long expirationTime = System.currentTimeMillis()+duration*60*1000;
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Map<String,String> expirationEntry = new HashMap<>();
+            expirationEntry.put("type", type);
+            expirationEntry.put("expirationTime", sdf.format(new Date(expirationTime)));
+            expirationEntry.put("expirationTimeStamp", ""+expirationTime);
+            expirationEntry.put("db", dbName);
+            couchUserData.getJSONArray("expiration").put(expirationEntry);
+
+            usersClient.update(couchUserData.toMap());
+        }
 
 
         security.put("_id", "_security");
@@ -149,12 +172,78 @@ public class AccessService {
 
         Map creationEvent = new HashMap();
         creationEvent.put("user", userId);
-        creationEvent.put("type", "accessChanged");
+        creationEvent.put("type", "accessGranted");
         creationEvent.put("database", dbName);
         creationEvent.put("accessType", type);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         creationEvent.put("timeStamp", sdf.format(new Date()));
         accessManagerClient.save(creationEvent);
+    }
+
+    /**
+     * Remove the access. No roles or attributes needed, you can give up your claim without specifying a reason :-)
+     * @param userId
+     * @param type
+     * @param dbName
+     */
+    public void removeAccess(String userId, String type, String dbName) {
+        CouchDbClient dbClient = this.couchDbClientFactory.getClient(dbName);
+        CouchDbClient usersClient = this.couchDbClientFactory.getClient("_users");
+        CouchDbClient accessManagerClient = this.couchDbClientFactory.getClient(ACCESS_MANAGER);
+        Map security = getSecurityDoc(dbClient, dbName);
+        boolean change = false;
+        switch(type) {
+            case "admin":
+                if(security.containsKey("admins")) {
+                    List<String> nameList = (List<String>) ((Map) security.get("admins")).get("names");
+                    while(nameList.contains(userId)) {
+                        change = true;
+                        nameList.remove(userId); // cope with manual changes... may be present multiple times
+                    }
+                    if(change) {
+                        dbClient.save(security);
+                    }
+
+                }
+                break;
+            case "reader":
+                // if you loose reader, you also can'r write any more... as described in the doc
+                if(security.containsKey("members")) {
+                    List<String> nameList = (List<String>) ((Map) security.get("members")).get("names");
+                    while(nameList.contains(userId)) {
+                        change = true;
+                        nameList.remove(userId); // cope with manual changes... may be present multiple times
+                    }
+                    if(change) {
+                        dbClient.save(security);
+                    }
+                }
+                break;
+            case "writer":
+                JSONObject couchUserData = this.plainRestClient.getUserDoc(userId);
+                if(couchUserData.has("roles")) {
+                    List<String> roleList = couchUserData.getJSONArray("roles").toList().stream().map(o -> o.toString()).collect(Collectors.toList());
+                    while(roleList.contains(dbName+"_writer")) {
+                        roleList.remove(dbName+"_writer"); // cope with manual changes... may be present multiple times
+                        change = true;
+                    }
+                    couchUserData.put("roles", new JSONArray(roleList));
+                    usersClient.update(couchUserData.toMap());
+                }
+
+                break;
+        }
+
+        if(change) {
+            Map removalEvent = new HashMap();
+            removalEvent.put("user", userId);
+            removalEvent.put("type", "accessRemoved");
+            removalEvent.put("database", dbName);
+            removalEvent.put("accessType", type);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            removalEvent.put("timeStamp", sdf.format(new Date()));
+            accessManagerClient.save(removalEvent);
+        }
     }
 
 

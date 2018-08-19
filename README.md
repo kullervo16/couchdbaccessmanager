@@ -7,8 +7,15 @@ you cannot plug keycloak directly into couch... and even then, you would still n
 
 So this access manager tries to make your life easier, creating some sensible defaults.
 
+## The security model translation
 A main goal is that (as an admin)you can inspect what the access manager did via fauxton. You can also use the available user management
 screens to add/remove access.. the access manager will take those modifications into account.
+
+The access manager does not use generic roles to grant access, but specific users.. this way you can directly see who currently has access in the
+fauxton permission view. So an admin is added to the admin list, a reader/writer to the members list.
+
+A writer is a member that has an additional role. This means that we do not support writers that cannot read (which would not make that much
+sense anyway). So retracting or limiting the reader access, directly retracts the writer permission as well.
 
 ## Features
 
@@ -37,10 +44,12 @@ user can request access to all databases
 Passwords are nice, but you do not always want to grant permanent access. Therefore the access manager keeps track of the 
 access it grants, and revokes it when the duration expires.
 
-The governing attribute is ```couch_[admin/reader/writer]_duration```. This is the number of hours the access will remain active. If
-not present, it defaults to 24 hours.
+The governing attribute is ```couch_[admin/reader/writer]_duration```. This is the number of minutes the access will remain active. If
+not present, it defaults to 1440 (so 24 hours). If you want to disable expiration, set the attribute to -1
 
 **Make sure to create a proper role mapping for the client so that this attribute is present in your access token!**
+
+**At the moment, there is no support for different expiration time per database**
 
 ### Read-only access
 The access manager is capable of installing a validation document to effectively create a read-only access.

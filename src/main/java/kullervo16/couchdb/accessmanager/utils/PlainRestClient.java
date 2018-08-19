@@ -113,6 +113,33 @@ public class PlainRestClient {
         }
     }
 
+    /**
+     * For some reason, lightcouch doesn't load the user views as it should.. fall back to basic HTTP :-)
+     * @return
+     */
+    public JSONArray getPendingExpirations() {
+        init();
+        try {
+            HttpResponse response = client.execute(
+                    new HttpGet("http://"+this.chouchHost+":"+this.couchPort+"/_users/_design/accessManager/_view/expiration"), context);
+            int statusCode = response.getStatusLine().getStatusCode();
+            if(statusCode == 200) {
+                try(InputStream is = response.getEntity().getContent()) {
+                    return new JSONObject(getContent(is)).getJSONArray("rows");
+                }
+
+            } else if(statusCode == 404) {
+              // design doc not (yet) present.. indicate via return null so the logic can create it
+                return null;
+            } else {
+                throw new IllegalStateException("Cannot get pending expirations : "+statusCode);
+            }
+        }catch(IOException ioe) {
+            this.client = null; // force recreation
+            throw new IllegalStateException("Cannot get pending expirations : " +ioe.getMessage(), ioe);
+        }
+    }
+
     private String getContent(InputStream is) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder content = new StringBuilder();
