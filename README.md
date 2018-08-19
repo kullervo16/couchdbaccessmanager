@@ -7,6 +7,9 @@ you cannot plug keycloak directly into couch... and even then, you would still n
 
 So this access manager tries to make your life easier, creating some sensible defaults.
 
+A main goal is that (as an admin)you can inspect what the access manager did via fauxton. You can also use the available user management
+screens to add/remove access.. the access manager will take those modifications into account.
+
 ## Features
 
 ### Activate security
