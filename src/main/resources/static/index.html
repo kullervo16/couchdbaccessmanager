@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CouchDB Access manager</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <script src="js/jquery-3.3.1.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="jumbotron text-center" id="header">
+        <h1>CouchDB Access Manager</h1>
+        <p id="fetching">Fetching user data...</p>
+        <div id="userData" style="display:none">
+            <p><strong>UserName : </strong><span id="userName"/></p>
+            <p><strong>UserId : </strong><span id="userId"/></p>
+            <div id="newPassword" style="display:none">
+                <p><strong>Password : </strong><span id="password"/></p>
+                <h1>!!! WARNING : please copy this password to a safe place, if you refresh your page the password will no longer be visible and cannot be recovered !!!</h1>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <table border="true" width="80%" id="accessTable">
+                <tr bgcolor="#f0ffff">
+                    <th>DB Name</th>
+                    <th>Reader</th>
+                    <th>Writer</th>
+                    <th>Admin</th>
+                    <th>Action</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>
