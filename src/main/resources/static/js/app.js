@@ -27,22 +27,32 @@ function loadUserData() {
             dbName = dbList[i];
             var newRow = '<tr class="tableContent"><td>'+dbName+'</td>';
             // reader
+            var expiration = "";
             if(data.accessMap[dbName].readAccess) {
-                newRow = newRow + "<td bgcolor='green'></td>";
+                if(data.accessMap[dbName].readExpires != undefined) {
+                    expiration = data.accessMap[dbName].readExpires
+                }
+                newRow = newRow + "<td class='active'>"+expiration+"</td>";
             } else {
-                newRow = newRow + "<td bgcolor='#8b0000'></td>";
+                newRow = newRow + "<td class='inactive'></td>";
             }
             // writer
             if(data.accessMap[dbName].writeAccess) {
-                newRow = newRow + "<td bgcolor='green'></td>";
+                if(data.accessMap[dbName].writeExpires != undefined) {
+                    expiration = data.accessMap[dbName].writeExpires
+                }
+                newRow = newRow + "<td class='active'>"+expiration+"</td>";
             } else {
-                newRow = newRow + "<td bgcolor='#8b0000'></td>";
+                newRow = newRow + "<td class='inactive'></td>";
             }
             // admin
             if(data.accessMap[dbName].adminAccess) {
-                newRow = newRow + "<td bgcolor='green'></td>";
+                if(data.accessMap[dbName].adminExpires != undefined) {
+                    expiration = data.accessMap[dbName].adminExpires
+                }
+                newRow = newRow + "<td class='active'>"+expiration+"</td>";
             } else {
-                newRow = newRow + "<td bgcolor='#8b0000'></td>";
+                newRow = newRow + "<td class='inactive'></td>";
             }
             // actions
             newRow = newRow +"<td align='center'><a onclick=\"requestAccess(\'"+dbName+"\');\">Request access</a></td>";

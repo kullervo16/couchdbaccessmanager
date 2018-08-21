@@ -7,5 +7,7 @@ public class DatabaseAccess {
     private boolean readAccess;
     private boolean writeAccess;
     private boolean adminAccess;
-    private String expires;
+    private String readExpires;
+    private String writeExpires;
+    private String adminExpires;
 }

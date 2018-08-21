@@ -89,6 +89,28 @@ public class AccessService {
                 userData.getAccessMap().put(dbName, dbAccess);
             }
         }
+
+        // finally : read the expiration data and update the status in the userData object
+        JSONArray expirations = plainRestClient.getPendingExpirations(userId);
+        if(expirations != null) {
+            System.out.println(expirations);
+            for (int i = 0; i < expirations.length(); i++) {
+                JSONObject expirationEntry = expirations.getJSONObject(i).getJSONObject("value");
+                DatabaseAccess access = userData.getAccessMap().get(expirationEntry.getString("db"));
+                switch(expirationEntry.getString("type")) {
+                    case "reader":
+                        access.setReadExpires(expirationEntry.getString("expirationTime"));
+                        break;
+                    case "writer":
+                        access.setWriteExpires(expirationEntry.getString("expirationTime"));
+                        break;
+                    case "admin":
+                        access.setAdminExpires(expirationEntry.getString("expirationTime"));
+                        break;
+
+                }
+            }
+        }
         return userData;
     }
 

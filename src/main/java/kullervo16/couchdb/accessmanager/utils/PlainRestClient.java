@@ -11,6 +11,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicAuthCache;
@@ -26,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -140,6 +142,34 @@ public class PlainRestClient {
         }catch(IOException ioe) {
             this.client = null; // force recreation
             throw new IllegalStateException("Cannot get pending expirations : " +ioe.getMessage(), ioe);
+        }
+    }
+
+    /**
+     * For some reason, lightcouch doesn't load the user views as it should.. fall back to basic HTTP :-)
+     * @return
+     */
+    public JSONArray getPendingExpirations(String userId) {
+        init();
+        try {
+            URIBuilder builder = new URIBuilder("http://"+this.chouchHost+":"+this.couchPort+"/_users/_design/accessManager/_view/expirationByUser");
+            builder = builder.setParameter("key", "\""+userId+"\"");
+            HttpResponse response = client.execute(new HttpGet(builder.build()), context);
+            int statusCode = response.getStatusLine().getStatusCode();
+            if(statusCode == 200) {
+                try(InputStream is = response.getEntity().getContent()) {
+                    return new JSONObject(getContent(is)).getJSONArray("rows");
+                }
+
+            } else if(statusCode == 404) {
+                // design doc not (yet) present.. indicate via return null so the logic can create it
+                return null;
+            } else {
+                throw new IllegalStateException("Cannot get pending expirations for user "+userId+" : "+ statusCode);
+            }
+        }catch(Exception ioe) {
+            this.client = null; // force recreation
+            throw new IllegalStateException("Cannot get pending expirations for user "+userId+" : "+ ioe);
         }
     }
 
