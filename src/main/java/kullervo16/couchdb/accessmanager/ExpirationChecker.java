@@ -5,10 +5,15 @@ import kullervo16.couchdb.accessmanager.utils.PlainRestClient;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.lightcouch.CouchDbClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,6 +37,12 @@ public class ExpirationChecker {
         JSONArray viewResult = restClient.getPendingExpirations();
         if(viewResult == null) {
             // the view does not yet/no longer exist, (re)create it
+            try(InputStream is = this.getClass().getResourceAsStream("/expiration.json")) {
+                this.restClient.updateUserViewDoc(is);
+            }catch(IOException ioe) {
+                ioe.printStackTrace();
+                log.error("Cannot save view "+ioe.getMessage());
+            }
         } else {
             List<Map> pendingTasks = viewResult.toList().stream().map(o -> (Map)o).collect(Collectors.toList());
             for (Map pendingTask : pendingTasks) {

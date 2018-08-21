@@ -1,5 +1,6 @@
 package kullervo16.couchdb.accessmanager.utils;
 
+import jdk.internal.util.xml.impl.Input;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
@@ -8,7 +9,9 @@ import org.apache.http.client.AuthCache;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.impl.client.BasicCredentialsProvider;
@@ -137,6 +140,24 @@ public class PlainRestClient {
         }catch(IOException ioe) {
             this.client = null; // force recreation
             throw new IllegalStateException("Cannot get pending expirations : " +ioe.getMessage(), ioe);
+        }
+    }
+
+    public void updateUserViewDoc(InputStream is) {
+        init();
+        try {
+
+            InputStreamEntity entity = new InputStreamEntity(is);
+            HttpPut put = new HttpPut("http://"+this.chouchHost+":"+this.couchPort+"/_users/_design/accessManager");
+            put.setEntity(entity);
+            HttpResponse response = client.execute(put , context);
+            int statusCode = response.getStatusLine().getStatusCode();
+            if(statusCode != 201) {
+                throw new IllegalStateException("Cannot create design doc : "+statusCode);
+            }
+        }catch(IOException ioe) {
+            this.client = null; // force recreation
+            throw new IllegalStateException("Cannot create design doc : " +ioe.getMessage(), ioe);
         }
     }
 

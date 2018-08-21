@@ -3,6 +3,9 @@
   "views": {
     "expiration": {
       "map": "function (doc) {\n  if(doc.expiration !== undefined) {\n    for(var i=0;i<doc.expiration.length;i++) {\n      emit(doc.expiration[i].expirationTimeStamp, doc.expiration[i]);\n    }\n  }\n}"
+    },
+    "expirationByUser": {
+      "map": "function (doc) {\n  if(doc.expiration !== undefined) {\n    for(var i=0;i<doc.expiration.length;i++) {\n      emit(doc.name, doc.expiration[i]);\n    }\n  }\n}"
     }
   },
   "language": "javascript"

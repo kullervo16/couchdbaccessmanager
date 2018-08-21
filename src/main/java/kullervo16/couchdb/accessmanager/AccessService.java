@@ -313,7 +313,7 @@ public class AccessService {
             // also set the write protection view
             Map writeProtection = new HashMap();
             writeProtection.put("_id","_design/accessMgr");
-            writeProtection.put("validate_doc_update", "function(newDoc, oldDoc, userCtx) { if (userCtx.roles.indexOf(userCtx.db + '_writer') < 0) throw({forbidden: 'you are not allowed to write documents in this database '+userCtx.db+'/'+userCtx.roles+'/'+userCtx.roles.indexOf(userCtx.db + '_writer')});}");
+            writeProtection.put("validate_doc_update", "function(newDoc, oldDoc, userCtx) { if (userCtx.roles.indexOf(userCtx.db + '_writer') < 0 && userCtx.roles.indexOf('_admin') < 0) throw({forbidden: 'you are not allowed to write documents in this database '+userCtx.db+'/'+userCtx.roles+'/'+userCtx.roles.indexOf(userCtx.db + '_writer')});}");
             dbClient.save(writeProtection);
         }
         return security;
