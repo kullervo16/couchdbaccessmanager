@@ -79,25 +79,32 @@ function requestAccess(dbName) {
         },
 
         buttons: {  "Read": function() {
+                $(this).dialog("close");
                 $.get( "access/requestAccess/"+dbName+"/reader", function( data ) {
                     console.log("Requested read access for " + dbName);
                     loadUserData();
+                }).fail(function (data) {
+                    alert("Could not grant you the requested access : "+data.responseText);
                 });
-                $(this).dialog("close");
             },
             "Write": function() {
+                $(this).dialog("close");
                 $.get( "access/requestAccess/"+dbName+"/writer", function( data ) {
                     console.log("Requested write access for " + dbName);
                     loadUserData();
+                }).fail(function (data) {
+                    alert("Could not grant you the requested access : "+data.responseText);
                 });
-                $(this).dialog("close");
+
             },
             "Admin": function() {
+                $(this).dialog("close");
                 $.get( "access/requestAccess/"+dbName+"/admin", function( data ) {
                     console.log("Requested admin access for " + dbName);
                     loadUserData();
+                }).fail(function (data) {
+                    alert("Could not grant you the requested access : "+data.responseText);
                 });
-                $(this).dialog("close");
             },
             "Cancel": function() { $(this).dialog("close"); }}
     });

@@ -50,8 +50,9 @@ public class Controller {
                     accessHelper.getAttributes(user));
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch(NoAccessException nae) {
-            log.warn("No access for "+accessHelper.getUserId(user)+": "+nae.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            String msg = "No access for "+accessHelper.getUserId(user)+": "+nae.getMessage();
+            log.warn(msg);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(msg);
         }
 
     }
