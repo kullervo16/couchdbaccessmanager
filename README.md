@@ -55,7 +55,19 @@ not present, it defaults to 1440 (so 24 hours). If you want to disable expiratio
 The access manager is capable of installing a validation document to effectively create a read-only access.
 
 
-### Justification
-The access manager keeps a track record of which access is requested, and allows the user to justify that access. This allows
-your cluster admin to look not only who had access, but for what this access was supposed to be used... up to you to check
-the access logs to see whether it fits.
+
+## Docker
+A Dockerfile is provided. The image does not require any volumes. You can specify the security config via environment variables.
+
+Typical use :
+
+```
+docker run -d -e keycloak.realm = <your realm> \
+              -e keycloak.auth-server-url = http://<your server>/auth \
+              -e keycloak.credentials.secret = <your client secret> \
+              -e couch.host=<your couch server> \
+              -e couch.port=<your couch port> \
+              -e couch.userName=<your couch cluster admin> \
+              -e couch.pwd=<your password> \
+              -p <your port>:8081 kullervo16/couchdbaccessmanager:0.1
+```
